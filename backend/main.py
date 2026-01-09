@@ -194,9 +194,34 @@ async def upload_pdfs(files: List[UploadFile] = File(...)):
             extracted_text, extraction_method = extract_text_from_pdf(temp_file_path)
             
             # Extract contact info using OpenAI (pass extraction method for OCR-specific handling)
-            contact_info = extract_contact_info(extracted_text, file.filename, extraction_method)
+            try:
+                contact_info = extract_contact_info(extracted_text, file.filename, extraction_method)
+                print(f"INFO: Extraction completed for {file.filename}, contact_info keys: {contact_info.keys() if isinstance(contact_info, dict) else 'Not a dict'}")
+            except Exception as e:
+                print(f"ERROR: extract_contact_info failed for {file.filename}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                contact_info = {
+                    "company_name": {"value": None, "confidence": "none"},
+                    "contact_name": {"value": None, "confidence": "none"},
+                    "email": {"value": None, "confidence": "none"},
+                    "phone": {"value": None, "confidence": "none"},
+                    "website": {"value": None, "confidence": "none"},
+                    "trade": {"value": None, "confidence": "none"},
+                }
             
             # Build proposal result
+            if not isinstance(contact_info, dict):
+                print(f"ERROR: contact_info is not a dict for {file.filename}, type: {type(contact_info)}")
+                contact_info = {
+                    "company_name": {"value": None, "confidence": "none"},
+                    "contact_name": {"value": None, "confidence": "none"},
+                    "email": {"value": None, "confidence": "none"},
+                    "phone": {"value": None, "confidence": "none"},
+                    "website": {"value": None, "confidence": "none"},
+                    "trade": {"value": None, "confidence": "none"},
+                }
+            
             proposal = {
                 "source_file": file.filename,
                 "extraction_method": extraction_method,

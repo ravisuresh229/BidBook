@@ -259,7 +259,7 @@ Use null for values that are not found. Do not include any additional text or ex
 Your primary goal is to identify the **PROPOSER** (the subcontractor company sending the bid), NOT the CLIENT (the general contractor receiving the bid).
 
 ANALYSIS PRIORITY:
-1. **Company Name:** TRUST the Header/Logo at the top of Page 1 above all else. Do NOT let garbage text in the footer override a clear Company Name. The company in the HEADER/LOGO at the TOP is the PROPOSER.
+1. **Company Name:** CRITICAL - Check the `[HEADER_SCAN]` section at the very top of the text. If a Company Name or Logo text appears there (e.g. 'UNITED ELECTRIC', 'R. E. Lee'), PRIORITIZE it over all other text. This scan captures logos that standard extraction misses. TRUST the Header/Logo at the top of Page 1 above all else. Do NOT let garbage text in the footer override a clear Company Name. The company in the HEADER/LOGO at the TOP is the PROPOSER.
 2. **Contact Info:** TRUST the `[FOOTER DATA START]` / `[FOOTER DATA END]` section for Phone, Website, and Email. If the footer contains a phone number (e.g. 301-...), associate it with the Company found in the Header.
 
 CRITICAL RULES:
@@ -271,6 +271,8 @@ CRITICAL RULES:
 CONTACT INFORMATION LOCATIONS - Search ALL of these areas:
 
 1. HEADER/LETTERHEAD (top of first page):
+   - **CRITICAL: Check the `[HEADER_SCAN]` section at the very top of the text FIRST for Company Name.**
+   - This scan captures logos and letterheads that standard text extraction misses.
    - Company name, logo
    - Address, phone, fax
    - Website URL (www.companyname.com, companyname.net, etc.)
@@ -376,7 +378,10 @@ Always return valid JSON with `reasoning` as the first field, followed by `data`
         print(f"ERROR: Extraction failed for {filename}: {str(e)}")
         print(f"Error type: {type(e).__name__}")
         import traceback
+        print("="*80)
+        print("FULL TRACEBACK:")
         traceback.print_exc()
+        print("="*80)
         return _get_empty_result()
 
 

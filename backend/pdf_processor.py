@@ -37,9 +37,33 @@ def extract_text_from_pdf(pdf_path: str) -> Tuple[str, str]:
         with pdfplumber.open(pdf_path) as pdf:
             for page_num, page in enumerate(pdf.pages):
                 # Extract standard page text
-                page_text = page.extract_text()
+                page_text = page.extract_text() or ""
+                
+                # HEADER RECOVERY (Page 1 Only) - Critical for United & R. Lee
+                ocr_header_text = ""
+                if page_num == 0:
+                    try:
+                        # Re-use the existing pdf2image logic for headers
+                        header_images = convert_from_path(pdf_path, first_page=1, last_page=1, dpi=300)
+                        if header_images:
+                            header_img = header_images[0]
+                            img_width, img_height = header_img.size
+                            # Crop the Top 20% for header region
+                            header_region = header_img.crop((0, 0, img_width, int(img_height * 0.20)))
+                            ocr_header_text = pytesseract.image_to_string(header_region, config='--psm 6')
+                            if len(ocr_header_text.strip()) > 5:
+                                ocr_header_text = f"\n[HEADER_SCAN]:\n{ocr_header_text.strip()}\n"
+                                print(f"DEBUG: OCR'd Header Text (Page 1, High-Res 300 DPI): {ocr_header_text.strip()}")
+                                sys.stdout.flush()
+                    except Exception as e:
+                        print(f"DEBUG: Header OCR failed for page 1: {e}")
+                        sys.stdout.flush()
+                
+                # Prepend header, Append page text
+                if ocr_header_text:
+                    text += ocr_header_text
                 if page_text:
-                    text += page_text + "\n"
+                    text += f"--- PAGE {page_num+1} ---\n{page_text}\n"
                 
                 # Force footer extraction: Extract bottom 8% of EVERY page (tightened to avoid table rows)
                 page_height = page.height
@@ -128,9 +152,29 @@ def extract_text_from_pdf(pdf_path: str) -> Tuple[str, str]:
         filename = os.path.basename(pdf_path)
         
         for page_num, image in enumerate(images):
+            # HEADER RECOVERY (Page 1 Only) - Critical for United & R. Lee
+            ocr_header_text = ""
+            if page_num == 0:
+                try:
+                    img_width, img_height = image.size
+                    # Crop the Top 20% for header region
+                    header_region = image.crop((0, 0, img_width, int(img_height * 0.20)))
+                    ocr_header_text = pytesseract.image_to_string(header_region, config='--psm 6')
+                    if len(ocr_header_text.strip()) > 5:
+                        ocr_header_text = f"\n[HEADER_SCAN]:\n{ocr_header_text.strip()}\n"
+                        print(f"DEBUG: Recovered Header (OCR): {ocr_header_text[:50]}...")
+                        sys.stdout.flush()
+                except Exception as e:
+                    print(f"Header OCR failed (OCR path): {e}")
+                    sys.stdout.flush()
+            
+            # Prepend header if present
+            if ocr_header_text:
+                ocr_text += ocr_header_text
+            
             # Extract full page text - ENSURE we pass the *entire* image height to OCR
             page_text = pytesseract.image_to_string(image, config=custom_config)
-            ocr_text += page_text + "\n"
+            ocr_text += f"--- PAGE {page_num+1} ---\n{page_text}\n"
             
             # Force footer extraction: Extract bottom 15% of image explicitly
             img_width, img_height = image.size
