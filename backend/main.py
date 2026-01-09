@@ -261,7 +261,12 @@ async def confirm_proposals(proposals: List[dict]):
 @app.get("/")
 async def root():
     """Health check endpoint."""
-    return {"message": "Bridgeline PDF Extraction API"}
+    return {"message": "BidBook PDF Extraction API", "status": "healthy"}
+
+@app.get("/health")
+async def health():
+    """Health check endpoint for Railway."""
+    return {"status": "healthy", "service": "BidBook API"}
 
 
 if __name__ == "__main__":
