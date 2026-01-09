@@ -12,17 +12,20 @@ load_dotenv()
 
 app = FastAPI()
 
-# Configure CORS - allow frontend URL from environment variable, fallback to localhost
+# Configure CORS - allow all origins for now (can be restricted later)
+# In production, you can restrict to specific domains
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-allowed_origins = [frontend_url]
-# In production, you may want to add multiple origins
-if os.getenv("ALLOWED_ORIGINS"):
-    allowed_origins.extend(os.getenv("ALLOWED_ORIGINS").split(","))
+allowed_origins = ["*"]  # Allow all origins - change to [frontend_url] for production security
+
+# Uncomment below to restrict to specific origins in production:
+# allowed_origins = [frontend_url]
+# if os.getenv("ALLOWED_ORIGINS"):
+#     allowed_origins.extend(os.getenv("ALLOWED_ORIGINS").split(","))
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
+    allow_credentials=False,  # Must be False when allow_origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )
