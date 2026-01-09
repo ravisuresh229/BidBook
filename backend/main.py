@@ -12,20 +12,29 @@ load_dotenv()
 
 app = FastAPI()
 
-# Configure CORS - allow all origins for now (can be restricted later)
-# In production, you can restrict to specific domains
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-allowed_origins = ["*"]  # Allow all origins - change to [frontend_url] for production security
+# Configure CORS - allow Vercel origins (all .vercel.app domains) and localhost
+import re
 
-# Uncomment below to restrict to specific origins in production:
-# allowed_origins = [frontend_url]
-# if os.getenv("ALLOWED_ORIGINS"):
-#     allowed_origins.extend(os.getenv("ALLOWED_ORIGINS").split(","))
+# Build allowed origins list
+allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
+# Add FRONTEND_URL if set and not already in list
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+if frontend_url and frontend_url not in allowed_origins:
+    allowed_origins.append(frontend_url)
+
+# Add any additional origins from env
+if os.getenv("ALLOWED_ORIGINS"):
+    allowed_origins.extend(os.getenv("ALLOWED_ORIGINS").split(","))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=False,  # Must be False when allow_origins=["*"]
+    allow_origin_regex=r"https://.*\.vercel\.app$",  # Allow all Vercel deployments
+    allow_origins=allowed_origins,  # Explicit origins for localhost
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
