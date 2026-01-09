@@ -79,7 +79,10 @@ def extract_contact_info(text: str, filename: str, extraction_method: str = "tex
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         # Return empty result if API key is missing (error handling in main.py)
+        print(f"ERROR: OPENAI_API_KEY not found in environment variables for {filename}")
         return _get_empty_result()
+    else:
+        print(f"INFO: OpenAI API key found (length: {len(api_key)} chars, starts with: {api_key[:10]}...)")
     
     # DEBUG LOGGING: Print raw extracted text
     import sys
@@ -244,6 +247,7 @@ Use null for values that are not found. Do not include any additional text or ex
 
     try:
         client = OpenAI(api_key=api_key)
+        print(f"INFO: Calling OpenAI API for {filename}...")
         
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -344,22 +348,35 @@ Always return valid JSON with `reasoning` as the first field, followed by `data`
         
         # Parse the JSON response
         result_text = response.choices[0].message.content
+        print(f"INFO: OpenAI API response received for {filename} (length: {len(result_text)} chars)")
+        print(f"INFO: Response preview: {result_text[:200]}...")
+        
         result_dict = json.loads(result_text)
         
         # Validate with Pydantic
         try:
             extraction_result = ExtractionResult(**result_dict)
             # Convert Pydantic model to dict format expected by main.py
-            return _convert_to_dict_format(extraction_result)
+            converted_result = _convert_to_dict_format(extraction_result)
+            print(f"INFO: Successfully extracted data for {filename}: company={converted_result.get('company_name', {}).get('value', 'None')}")
+            return converted_result
         except Exception as e:
             # If Pydantic validation fails, try to extract what we can
+            print(f"WARNING: Pydantic validation failed for {filename}, using fallback: {str(e)}")
+            print(f"DEBUG: Result dict keys: {result_dict.keys() if isinstance(result_dict, dict) else 'Not a dict'}")
             return _normalize_result_fallback(result_dict)
         
     except json.JSONDecodeError as e:
         # If OpenAI returns invalid JSON, return empty result
+        print(f"ERROR: JSON decode error in extractor for {filename}: {str(e)}")
+        print(f"Response content: {response.choices[0].message.content[:500] if 'response' in locals() else 'No response'}")
         return _get_empty_result()
     except Exception as e:
         # Catch any other OpenAI API errors
+        print(f"ERROR: Extraction failed for {filename}: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         return _get_empty_result()
 
 
