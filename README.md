@@ -113,6 +113,15 @@ Scaling Bidbook from a demo to an enterprise-grade SaaS involves moving from syn
 - **Missing Data:** Some proposals genuinely lack email addresses or contact names. The system honestly reports `null` rather than guessing.
 - **Signature Block Contacts:** Names buried in signature blocks (e.g., "Vice President") are sometimes missed; the Review step allows manual entry.
 
+
+## 🔮 Roadmap (Bonus Features)
+
+To keep the MVP lightweight and stateless, the following bonus features were designed but not implemented in v1.0:
+
+* **Multi-Contact Support:** The current schema optimizes for the "Primary Contact." v2.0 will update the JSON structure to support an array of `contacts` per company.
+* **Confidence Scoring:** While v1.0 uses binary validation (Green/Red badges), v2.0 will implement heuristic scoring (0-100%) based on regex patterns for email/phone validity.
+* **Deduplication:** As noted in the Scalability section, deduplication is best handled at the Database level (Postgres) rather than in the application layer to ensure data integrity across concurrent uploads.
+
 ---
 
 ## 🏃‍♂️ Quick Start
