@@ -289,13 +289,27 @@ export default function ReviewTable({ proposals, extractionMetadata = {}, onConf
                                   </select>
                                 </div>
 
-                                {/* Email Field (Always Editable) */}
+                                {/* Email Field (Always Editable with Validation) */}
                                 <div className="hidden lg:block min-w-[200px]">
                                   <input
                                     type="email"
                                     placeholder="Enter email..."
                                     value={proposal.email?.value || ''}
-                                    onChange={(e) => handleFieldChange(proposal._index, 'email', e.target.value)}
+                                    onChange={(e) => {
+                                      const email = e.target.value;
+                                      handleFieldChange(proposal._index, 'email', email);
+                                    }}
+                                    onBlur={(e) => {
+                                      const email = e.target.value.trim();
+                                      // Validate on blur - must have @ if not empty
+                                      if (email && !email.includes('@')) {
+                                        // Reset to previous value if invalid
+                                        const prevValue = proposal.email?.value || '';
+                                        if (prevValue !== email) {
+                                          handleFieldChange(proposal._index, 'email', prevValue);
+                                        }
+                                      }
+                                    }}
                                     className={`w-full px-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white hover:border-slate-300 transition-colors ${
                                       hasEmail 
                                         ? 'border-slate-200' 
@@ -304,13 +318,32 @@ export default function ReviewTable({ proposals, extractionMetadata = {}, onConf
                                   />
                                 </div>
 
-                                {/* Phone (Editable) */}
+                                {/* Phone (Editable with Validation) */}
                                 <div className="hidden xl:block min-w-[140px]">
                                   <input
                                     type="tel"
                                     placeholder="Enter phone..."
                                     value={proposal.phone?.value || ''}
-                                    onChange={(e) => handleFieldChange(proposal._index, 'phone', e.target.value)}
+                                    onChange={(e) => {
+                                      const phone = e.target.value;
+                                      // Allow typing, but restrict to max 10 digits
+                                      const digitsOnly = phone.replace(/\D/g, '');
+                                      if (digitsOnly.length <= 10) {
+                                        handleFieldChange(proposal._index, 'phone', phone);
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      const phone = e.target.value.trim();
+                                      // Validate on blur - must have 10 digits if not empty
+                                      const digitsOnly = phone.replace(/\D/g, '');
+                                      if (phone && digitsOnly.length !== 10) {
+                                        // Reset to previous value if invalid
+                                        const prevValue = proposal.phone?.value || '';
+                                        if (prevValue !== phone) {
+                                          handleFieldChange(proposal._index, 'phone', prevValue);
+                                        }
+                                      }
+                                    }}
                                     className="w-full px-3 py-1.5 text-sm text-slate-700 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white hover:border-slate-300 transition-colors"
                                   />
                                 </div>
@@ -352,12 +385,18 @@ export default function ReviewTable({ proposals, extractionMetadata = {}, onConf
                                   ))}
                                 </select>
                                 
-                                {/* Email (Mobile - Always Editable) */}
+                                {/* Email (Mobile - Always Editable with Validation) */}
                                 <input
                                   type="email"
                                   placeholder="Enter email..."
                                   value={proposal.email?.value || ''}
-                                  onChange={(e) => handleFieldChange(proposal._index, 'email', e.target.value)}
+                                  onChange={(e) => {
+                                    const email = e.target.value;
+                                    // Only allow update if email is empty or contains @
+                                    if (!email || email.includes('@')) {
+                                      handleFieldChange(proposal._index, 'email', email);
+                                    }
+                                  }}
                                   className={`w-full px-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white ${
                                     hasEmail 
                                       ? 'border-slate-200' 
@@ -365,12 +404,19 @@ export default function ReviewTable({ proposals, extractionMetadata = {}, onConf
                                   }`}
                                 />
                                 
-                                {/* Phone (Mobile - Editable) */}
+                                {/* Phone (Mobile - Editable with Validation) */}
                                 <input
                                   type="tel"
                                   placeholder="Enter phone..."
                                   value={proposal.phone?.value || ''}
-                                  onChange={(e) => handleFieldChange(proposal._index, 'phone', e.target.value)}
+                                  onChange={(e) => {
+                                    const phone = e.target.value;
+                                    // Only allow update if phone is empty or has 10 digits
+                                    const digitsOnly = phone.replace(/\D/g, '');
+                                    if (!phone || digitsOnly.length <= 10) {
+                                      handleFieldChange(proposal._index, 'phone', phone);
+                                    }
+                                  }}
                                   className="w-full px-3 py-1.5 text-sm text-slate-700 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                                 />
                                 
