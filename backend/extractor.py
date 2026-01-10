@@ -190,7 +190,7 @@ STEP 2: EXTRACT DATA - TWO ENTITIES
   - Normalize URLs by removing spaces (e.g., "www. daltonelectric .net" → "www.daltonelectric.net")
   - Do NOT extract recipient/client websites
 - **Trade/Scope:** Normalize the work description to a CSI MasterFormat Division (e.g., 'Electrical', 'Concrete', 'Earthwork', 'Civil', 'Plumbing', 'HVAC', 'General Requirements').
-  - **CRITICAL TRADE CLASSIFICATION RULE:** If the company name contains 'Communications', 'Telecom', 'Cabling', or if you see header strings like 'WIRELESS & COMMUNICATIONS', classify the Trade as 'Communications' or 'Low Voltage', NOT 'Electrical'. Look for explicit trade indicators in headers and document titles to override generic classifications.
+  - **CRITICAL TRADE CLASSIFICATION RULE:** DO NOT classify based on service lists in headers (e.g., "Civil > Pipeline > Communications"). Look at the Bid Line Items. If the text describes "Earthwork", "Grading", or "Concrete", select "Civil" or "Concrete"—even if the header says "Communications". Only classify as 'Communications' if the actual bid work is primarily for cabling/data/wireless. If company name contains 'Communications' but bid items are Earthwork/Civil, classify based on bid items.
 
 **CLIENT (Recipient) Data:**
 - **Company Name:** Extract from 'To:', 'Attn:', 'Submitted To:', or 'Client' sections.
@@ -264,6 +264,7 @@ ANALYSIS PRIORITY:
    - **Logo vs. Text:** The Logo text (often all caps, largest font) IS the company name. If the logo says 'GMC' and text below says 'Contracting, Inc.', combine them: 'GMC Contracting, Inc.'
    - **Fix OCR Artifacts:** If you see 'WT, UNITED' in the header but the text says 'United Electric', use 'United Electric'. Trust the actual document text over OCR artifacts.
    - **Company Name Validation (The "Logo vs. Legal" Rule):** Logos at the top of the page are often stylized or bad OCR (e.g., reading "BHI" as "CBHL"). IF the extracted header name looks like an acronym or is unclear, CHECK the "Accepted By" block, "Terms and Conditions", or signature blocks in the text. If the header says "CBHL" but the contract text repeatedly says "BHI retains the right" or "Authorized Signature: BHI", use the text version ("BHI"). Marketing logos are often stylized and hard to read—trust the 'Legal Name' found in contract language or signature blocks over the logo.
+   - **DATA VALIDATION - The "Email Domain" Truth:** Use the extracted email address to validate the Company Name. If the Header OCR is "CBHL" but the email is "...@bhico.com", the company is **BHI**. If the Header OCR is "WT, UNITED" but the email is "...@unitedelectric.com", the company is **United Electric**. **Rule:** When in doubt, trust the email domain and the Signature Block text over the Header Logo OCR result. The email domain is a reliable source of truth for the actual company name.
    - **Scurto Specific:** If the header says 'Scurto' and 'Cement Construction', combine them: 'Scurto Cement Construction Ltd.'
    - **R.E. Lee Specific:** If the text contains 'R. E. Lee Electric', extract exactly that. Do NOT auto-correct to 'R. C.' or any variation. Preserve the exact name as 'R. E. Lee Electric'.
    - TRUST the Header/Logo at the top of Page 1 above all else. Do NOT let garbage text in the footer override a clear Company Name. The company in the HEADER/LOGO at the TOP is the PROPOSER.
@@ -342,9 +343,11 @@ TRADE NORMALIZATION: You MUST normalize the trade/scope field to CSI MasterForma
 - "General Requirements" (general contracting, project management)
 
 **CRITICAL TRADE CLASSIFICATION RULE:**
-- If the company name contains 'Communications', 'Telecom', 'Cabling', or if you see header strings like 'WIRELESS & COMMUNICATIONS', classify the Trade as 'Communications' or 'Low Voltage', NOT 'Electrical'.
-- Explicitly look for header strings like 'WIRELESS & COMMUNICATIONS' to override generic electrical classification.
-- Communications/Telecom companies should NEVER be classified as 'Electrical'.
+- **The "Service List" Trap:** If a company lists multiple services in their header (e.g., "Civil > Pipeline > Communications" or "CONSTRUCTION MANAGEMENT > FACILITIES & PIPELINE > CIVIL & EXCAVATION > WIRELESS & COMMUNICATIONS"), DO NOT just pick the last one or classify based on the header services list.
+- **Look at the Bid Line Items:** If the text describes "Earthwork", "Grading", "Concrete", "Sewer", or "Utilities", select **"Civil"**, **"Earthwork"**, or **"Concrete"**—even if the header says "Communications" or "Wireless & Communications". The actual work being bid on is in the bid line items, not the marketing header.
+- If the company name contains 'Communications', 'Telecom', 'Cabling', or if you see header strings like 'WIRELESS & COMMUNICATIONS', but the bid line items are primarily Earthwork/Civil/Concrete, classify based on the bid items, not the company name or header.
+- Only classify as 'Communications' or 'Low Voltage' if the actual bid work is primarily for cabling, data, wireless, or low-voltage systems.
+- Communications/Telecom companies should NEVER be classified as 'Electrical' unless the bid is specifically for electrical work.
 
 Always return valid JSON with `reasoning` as the first field, followed by `data`."""
                 },
