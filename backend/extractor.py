@@ -189,9 +189,8 @@ STEP 2: EXTRACT DATA - TWO ENTITIES
   - Common patterns: www.companyname.com, companyname.net, companyname.org
   - Normalize URLs by removing spaces (e.g., "www. daltonelectric .net" → "www.daltonelectric.net")
   - Do NOT extract recipient/client websites
-- **Trade/Scope:** Normalize the work description to a CSI MasterFormat Division (e.g., 'Electrical', 'Concrete', 'Earthwork', 'Plumbing', 'HVAC', 'General Requirements').
-  - **CRITICAL TRADE CLASSIFICATION RULE:** If the company name contains 'Communications', 'Telecom', 'Cabling', or if you see header strings like 'WIRELESS & COMMUNICATIONS', classify the Trade as 'Communications' or 'Low Voltage', NOT 'Electrical'.
-  - Look for explicit trade indicators in headers and document titles to override generic classifications.
+- **Trade/Scope:** Normalize the work description to a CSI MasterFormat Division (e.g., 'Electrical', 'Concrete', 'Earthwork', 'Civil', 'Plumbing', 'HVAC', 'General Requirements').
+  - **CRITICAL TRADE CLASSIFICATION RULE:** If the company name contains 'Communications', 'Telecom', 'Cabling', or if you see header strings like 'WIRELESS & COMMUNICATIONS', classify the Trade as 'Communications' or 'Low Voltage', NOT 'Electrical'. Look for explicit trade indicators in headers and document titles to override generic classifications.
 
 **CLIENT (Recipient) Data:**
 - **Company Name:** Extract from 'To:', 'Attn:', 'Submitted To:', or 'Client' sections.
@@ -263,8 +262,8 @@ ANALYSIS PRIORITY:
    - **CRITICAL - Check the `[HEADER_SCAN]` section at the very top of the text FIRST.** If a Company Name or Logo text appears there (e.g. 'UNITED ELECTRIC', 'R. E. Lee'), PRIORITIZE it over all other text. This scan captures logos that standard extraction misses.
    - **Reconstruct Split Headers:** If the Header Scan shows 'GMC' on line 1 and 'Contracting, Inc.' on line 2, the company is 'GMC Contracting, Inc.'. NEVER drop the first word. Always combine split header lines.
    - **Logo vs. Text:** The Logo text (often all caps, largest font) IS the company name. If the logo says 'GMC' and text below says 'Contracting, Inc.', combine them: 'GMC Contracting, Inc.'
-   - **Fix OCR Artifacts:** If you see 'WT, UNITED' in the header but the text says 'United Electric', use 'United Electric'. If you see 'CBHL' but the document refers to 'BHI', use 'BHI'. Trust the actual document text over OCR artifacts.
-   - **BHI Specific:** If the header contains 'BHI' and 'Construction Management', the company is 'BHI'. Do not use 'CBHL' (OCR artifact).
+   - **Fix OCR Artifacts:** If you see 'WT, UNITED' in the header but the text says 'United Electric', use 'United Electric'. Trust the actual document text over OCR artifacts.
+   - **Company Name Validation (The "Logo vs. Legal" Rule):** Logos at the top of the page are often stylized or bad OCR (e.g., reading "BHI" as "CBHL"). IF the extracted header name looks like an acronym or is unclear, CHECK the "Accepted By" block, "Terms and Conditions", or signature blocks in the text. If the header says "CBHL" but the contract text repeatedly says "BHI retains the right" or "Authorized Signature: BHI", use the text version ("BHI"). Marketing logos are often stylized and hard to read—trust the 'Legal Name' found in contract language or signature blocks over the logo.
    - **Scurto Specific:** If the header says 'Scurto' and 'Cement Construction', combine them: 'Scurto Cement Construction Ltd.'
    - **R.E. Lee Specific:** If the text contains 'R. E. Lee Electric', extract exactly that. Do NOT auto-correct to 'R. C.' or any variation. Preserve the exact name as 'R. E. Lee Electric'.
    - TRUST the Header/Logo at the top of Page 1 above all else. Do NOT let garbage text in the footer override a clear Company Name. The company in the HEADER/LOGO at the TOP is the PROPOSER.
@@ -301,7 +300,7 @@ CONTACT INFORMATION LOCATIONS - Search ALL of these areas:
    - Contact name, title
    - Direct phone/cell number (PRIORITY for phone extraction)
    - Email address
-   - **CRITICAL: Search for 'Accepted By:', 'Signed By:', or 'President' at the end of the document.** The name found there (e.g., 'Ryan Leake', 'Rachael Bowley') is the Primary Contact if no other specific contact is found in the header. For R.E. Lee & United, the signer is often at the very end.
+   - **CRITICAL: Always check the last page for a "Submitted By", "Estimator", "Accepted By", "Signed By", "Authorized Signature", or "President" block.** This is the source of truth for the Contact Name and Email. The name found there (e.g., 'Ryan Leake', 'Rachael Bowley') is the Primary Contact if no other specific contact is found in the header. For R.E. Lee & United, the signer is often at the very end.
 
 4. BODY TEXT:
    - "Contact:" or "Estimator:" fields
@@ -338,7 +337,7 @@ TRADE NORMALIZATION: You MUST normalize the trade/scope field to CSI MasterForma
 - "Electrical" (lighting, conduit, power, wiring) - BUT NOT Communications/Telecom
 - "Communications" or "Low Voltage" (wireless, telecom, cabling, low voltage systems, data cabling) - **PRIORITY OVER Electrical**
 - "Plumbing" (piping, water heaters)
-- "Earthwork" (grading, excavation, sitework)
+- "Earthwork" or "Civil" (grading, excavation, sitework, utilities, paving, sewer)
 - "HVAC" (heating, ventilation, air conditioning)
 - "General Requirements" (general contracting, project management)
 
@@ -515,6 +514,12 @@ def _convert_to_dict_format(extraction_result: ExtractionResult) -> Dict[str, Di
             result["trade"]["value"] = normalized_trade
         elif result["trade"]["confidence"] == "high":
             result["trade"]["confidence"] = "medium"  # Downgrade if couldn't normalize
+    else:
+        # Fallback: If trade is missing, try to infer from company name
+        inferred_trade = _infer_trade_from_company_name(proposer_company)
+        if inferred_trade:
+            result["trade"]["value"] = inferred_trade
+            result["trade"]["confidence"] = "medium"  # Lower confidence since inferred
     
     # Note: client_info is extracted but not included in the result
     # This ensures the frontend only sees PROPOSER data
@@ -571,12 +576,20 @@ def _normalize_result_fallback(result_dict: Dict[str, Any]) -> Dict[str, Dict[st
                 value = _fix_malformed_url(value)
             
             # Special handling for trade field
-            if field == "trade" and value:
-                normalized_value = _normalize_trade(value)
-                if normalized_value:
-                    value = normalized_value
-                elif confidence == "high":
-                    confidence = "medium"
+            if field == "trade":
+                if value:
+                    normalized_value = _normalize_trade(value)
+                    if normalized_value:
+                        value = normalized_value
+                    elif confidence == "high":
+                        confidence = "medium"
+                else:
+                    # Fallback: If trade is missing, try to infer from company name
+                    if proposer_company:
+                        inferred_trade = _infer_trade_from_company_name(proposer_company)
+                        if inferred_trade:
+                            value = inferred_trade
+                            confidence = "medium"  # Lower confidence since inferred
             
             normalized[field] = {
                 "value": value if value else None,
@@ -592,6 +605,40 @@ def _normalize_result_fallback(result_dict: Dict[str, Any]) -> Dict[str, Dict[st
     }
     
     return normalized
+
+
+def _infer_trade_from_company_name(company_name: Optional[str]) -> Optional[str]:
+    """
+    Infer trade from company name when trade field is missing.
+    
+    This is a fallback to help classify companies when the LLM doesn't extract a trade.
+    
+    Args:
+        company_name: Company name string
+        
+    Returns:
+        Inferred trade division name or None if cannot be inferred
+    """
+    if not company_name or not isinstance(company_name, str):
+        return None
+    
+    company_lower = company_name.lower()
+    
+    # Company name keyword patterns
+    if any(keyword in company_lower for keyword in ['electric', 'electrical', 'lighting', 'power']):
+        return "Electrical"
+    elif any(keyword in company_lower for keyword in ['plumb', 'pipe', 'water']):
+        return "Plumbing"
+    elif any(keyword in company_lower for keyword in ['concrete', 'cement', 'foundation']):
+        return "Concrete"
+    elif any(keyword in company_lower for keyword in ['earthwork', 'excavation', 'grading', 'sitework']):
+        return "Earthwork"
+    elif any(keyword in company_lower for keyword in ['hvac', 'heating', 'ventilation', 'air conditioning', 'mechanical']):
+        return "HVAC"
+    elif any(keyword in company_lower for keyword in ['communication', 'telecom', 'wireless', 'cabling', 'low voltage']):
+        return "Communications"
+    
+    return None
 
 
 def _normalize_trade(trade_value: str) -> Optional[str]:
