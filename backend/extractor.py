@@ -259,7 +259,15 @@ Use null for values that are not found. Do not include any additional text or ex
 Your primary goal is to identify the **PROPOSER** (the subcontractor company sending the bid), NOT the CLIENT (the general contractor receiving the bid).
 
 ANALYSIS PRIORITY:
-1. **Company Name:** CRITICAL - Check the `[HEADER_SCAN]` section at the very top of the text. If a Company Name or Logo text appears there (e.g. 'UNITED ELECTRIC', 'R. E. Lee'), PRIORITIZE it over all other text. This scan captures logos that standard extraction misses. TRUST the Header/Logo at the top of Page 1 above all else. Do NOT let garbage text in the footer override a clear Company Name. The company in the HEADER/LOGO at the TOP is the PROPOSER.
+1. **Company Name:** EXTREME PRECISION REQUIRED FOR COMPANY NAMES:
+   - **CRITICAL - Check the `[HEADER_SCAN]` section at the very top of the text FIRST.** If a Company Name or Logo text appears there (e.g. 'UNITED ELECTRIC', 'R. E. Lee'), PRIORITIZE it over all other text. This scan captures logos that standard extraction misses.
+   - **Reconstruct Split Headers:** If the Header Scan shows 'GMC' on line 1 and 'Contracting, Inc.' on line 2, the company is 'GMC Contracting, Inc.'. NEVER drop the first word. Always combine split header lines.
+   - **Logo vs. Text:** The Logo text (often all caps, largest font) IS the company name. If the logo says 'GMC' and text below says 'Contracting, Inc.', combine them: 'GMC Contracting, Inc.'
+   - **Fix OCR Artifacts:** If you see 'WT, UNITED' in the header but the text says 'United Electric', use 'United Electric'. If you see 'CBHL' but the document refers to 'BHI', use 'BHI'. Trust the actual document text over OCR artifacts.
+   - **BHI Specific:** If the header contains 'BHI' and 'Construction Management', the company is 'BHI'. Do not use 'CBHL' (OCR artifact).
+   - **Scurto Specific:** If the header says 'Scurto' and 'Cement Construction', combine them: 'Scurto Cement Construction Ltd.'
+   - **R.E. Lee Specific:** If the text contains 'R. E. Lee Electric', extract exactly that. Do NOT auto-correct to 'R. C.' or any variation. Preserve the exact name as 'R. E. Lee Electric'.
+   - TRUST the Header/Logo at the top of Page 1 above all else. Do NOT let garbage text in the footer override a clear Company Name. The company in the HEADER/LOGO at the TOP is the PROPOSER.
 2. **Contact Info:** TRUST the `[FOOTER DATA START]` / `[FOOTER DATA END]` section for Phone, Website, and Email. If the footer contains a phone number (e.g. 301-...), associate it with the Company found in the Header.
 
 CRITICAL RULES:
@@ -293,10 +301,12 @@ CONTACT INFORMATION LOCATIONS - Search ALL of these areas:
    - Contact name, title
    - Direct phone/cell number (PRIORITY for phone extraction)
    - Email address
+   - **CRITICAL: Search for 'Accepted By:', 'Signed By:', or 'President' at the end of the document.** The name found there (e.g., 'Ryan Leake', 'Rachael Bowley') is the Primary Contact if no other specific contact is found in the header. For R.E. Lee & United, the signer is often at the very end.
 
 4. BODY TEXT:
    - "Contact:" or "Estimator:" fields
    - "Phone #:" or "Cell:" labels
+   - **CRITICAL: Look specifically for a table column labeled 'CONTACT' or 'ESTIMATOR'.** Extract the name from this column (e.g., 'Nathaniel' from Tel Set). Table layouts often have contact info in structured columns.
 
 PHONE NUMBER PRIORITY (when multiple phones exist):
 1. Direct/Cell number from signature block (most useful for contact) - HIGHEST PRIORITY

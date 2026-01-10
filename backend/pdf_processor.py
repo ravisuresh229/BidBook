@@ -153,19 +153,24 @@ def extract_text_from_pdf(pdf_path: str) -> Tuple[str, str]:
         
         for page_num, image in enumerate(images):
             # HEADER RECOVERY (Page 1 Only) - Critical for United & R. Lee
+            # For OCR path, we need high-res scan (300 DPI) for logos/letterheads
             ocr_header_text = ""
             if page_num == 0:
                 try:
-                    img_width, img_height = image.size
-                    # Crop the Top 20% for header region
-                    header_region = image.crop((0, 0, img_width, int(img_height * 0.20)))
-                    ocr_header_text = pytesseract.image_to_string(header_region, config='--psm 6')
-                    if len(ocr_header_text.strip()) > 5:
-                        ocr_header_text = f"\n[HEADER_SCAN]:\n{ocr_header_text.strip()}\n"
-                        print(f"DEBUG: Recovered Header (OCR): {ocr_header_text[:50]}...")
-                        sys.stdout.flush()
+                    # Convert Page 1 separately at 300 DPI for header scan (logos need high resolution)
+                    header_images = convert_from_path(pdf_path, first_page=1, last_page=1, dpi=300)
+                    if header_images:
+                        header_img = header_images[0]
+                        img_width, img_height = header_img.size
+                        # Crop the Top 20% for header region
+                        header_region = header_img.crop((0, 0, img_width, int(img_height * 0.20)))
+                        ocr_header_text = pytesseract.image_to_string(header_region, config=r'--psm 6')
+                        if len(ocr_header_text.strip()) > 5:
+                            ocr_header_text = f"\n[HEADER_SCAN]:\n{ocr_header_text.strip()}\n"
+                            print(f"DEBUG: OCR'd Header Text (OCR Path, Page 1, High-Res 300 DPI): {ocr_header_text.strip()}")
+                            sys.stdout.flush()
                 except Exception as e:
-                    print(f"Header OCR failed (OCR path): {e}")
+                    print(f"DEBUG: Header OCR failed (OCR path) for page 1: {e}")
                     sys.stdout.flush()
             
             # Prepend header if present
